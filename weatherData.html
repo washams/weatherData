@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Current Weather</title>
+    <style>
+        html, body {
+            height: 100%;
+            margin: 0;
+            padding: 0;
+        }
+        body {
+            min-height: 100vh;
+            min-width: 100vw;
+            font-family: Arial, sans-serif;
+            background: #f0f4f8;
+            color: #222;
+            padding: 2em;
+            background-image: url("https://images.unsplash.com/photo-1506744038136-46273834b3fb?auto=format&fit=crop&w=1500&q=80");
+            background-size: cover;
+            background-position: center center;
+            background-repeat: no-repeat;
+        }
+        .weather-box { background: #fff; border-radius: 8px; box-shadow: 0 2px 8px #0001; padding: 2em; max-width: 350px; margin: auto; }
+        .temp { font-size: 2.5em; font-weight: bold; }
+        .label { color: #555; }
+    </style>
+</head>
+<body>
+    <div class="weather-box" id="weather">
+        Loading weather...
+    </div>
+    <script>
+        function cToF(c) {
+            return (c * 9/5 + 32).toFixed(1);
+        }
+
+        function kmhToMph(kmh) {
+            return (kmh * 0.621371).toFixed(1);
+        }
+
+        function degToCompass(num) {
+            const val = Math.floor((num / 22.5) + 0.5);
+            const arr = ["N","NNE","NE","ENE","E","ESE","SE","SSE",
+                         "S","SSW","SW","WSW","W","WNW","NW","NNW"];
+            return arr[(val % 16)];
+        }
+
+        function showWeather(data, locationName) {
+            const w = data.current_weather;
+            document.getElementById('weather').innerHTML = `
+                <div class="label">${locationName ? locationName : ''}</div>
+                <div class="temp">${cToF(w.temperature)}°F</div>
+                <div class="label">Temperature</div>
+                <div><span class="label">Wind:</span> ${kmhToMph(w.windspeed)} mph</div>
+                <div><span class="label">Direction:</span> ${degToCompass(w.winddirection)}</div>
+            `;
+        }
+
+        async function getLocationName(lat, lon) {
+            try {
+                const res = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lon}`);
+                const data = await res.json();
+                // Try to get the town, city, or village name
+                return data.address.town || data.address.city || data.address.village || data.address.hamlet || data.display_name || '';
+            } catch {
+                return '';
+            }
+        }
+
+        if (navigator.geolocation) {
+            navigator.geolocation.getCurrentPosition(async (position) => {
+                const lat = position.coords.latitude;
+                const lon = position.coords.longitude;
+                const url = `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current_weather=true`;
+                try {
+                    const [weatherRes, locationName] = await Promise.all([
+                        fetch(url).then(r => r.json()),
+                        getLocationName(lat, lon)
+                    ]);
+                    showWeather(weatherRes, locationName);
+                } catch (e) {
+                    document.getElementById('weather').innerText = "Error fetching weather data.";
+                }
+            }, (error) => {
+                document.getElementById('weather').innerText = "Geolocation error: " + error.message;
+            });
+        } else {
+            document.getElementById('weather').innerText = "Geolocation is not supported by this browser.";
+        }
+    </script>
+<!-- Background image for 4 seasons -->
+</body>
+</html>
