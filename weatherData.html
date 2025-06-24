@@ -90,11 +90,32 @@ This HTML file displays the current weather for the user's location. It uses the
                 } catch (e) {
                     document.getElementById('weather').innerText = "Error fetching weather data.";
                 }
-            }, (error) => {
-                document.getElementById('weather').innerText = "Geolocation error: " + error.message;
+            }, async (error) => {
+                // Fallback to Hallsville, MO (lat: 39.1167, lon: -92.2171)
+                const lat = 39.1167;
+                const lon = -92.2171;
+                const url = `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current_weather=true`;
+                try {
+                    const [weatherRes, locationName] = await Promise.all([
+                        fetch(url).then(r => r.json()),
+                        Promise.resolve("Hallsville, MO")
+                    ]);
+                    showWeather(weatherRes, locationName);
+                } catch (e) {
+                    document.getElementById('weather').innerText = "Error fetching weather data for Hallsville, MO.";
+                }
             });
         } else {
-            document.getElementById('weather').innerText = "Geolocation is not supported by this browser.";
+            // Fallback if geolocation is not supported
+            const lat = 39.1167;
+            const lon = -92.2171;
+            const url = `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current_weather=true`;
+            fetch(url)
+                .then(r => r.json())
+                .then(weatherRes => showWeather(weatherRes, "Hallsville, MO"))
+                .catch(() => {
+                    document.getElementById('weather').innerText = "Error fetching weather data for Hallsville, MO.";
+                });
         }
     </script>
 </body>
